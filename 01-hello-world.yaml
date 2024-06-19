@@ -1,0 +1,70 @@
+# Example: Hello World App
+# Create the Deployment with 3 pods.
+# Create Cilium LB IP pool
+# Create the Service
+
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hello-world
+  name: hello-world
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-world
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      restartPolicy: Always
+      containers:
+      - image: rancher/hello-world
+        imagePullPolicy: Always
+        name: hello-world
+        ports:
+        - containerPort: 80
+          protocol: TCP
+          name: http
+
+
+---
+# Cilium LoadBalancer IP pool
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: "hello-world"
+spec:
+  blocks:
+  - cidr: "10.10.235.0/24"
+  serviceSelector:
+    matchLabels:
+      color: red
+
+---
+# Service type LoadBalancer
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world
+  labels:
+    color: red
+spec:
+  selector:
+    app: hello-world
+  loadBalancerIP: "10.10.235.33"
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
